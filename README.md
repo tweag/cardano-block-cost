@@ -1,5 +1,18 @@
 # Cardano's block cost analysis
-A home for Tweag's investigation into the cost structure of Cardano block validation
+A home for Tweag's investigation into the cost structure of Cardano block
+validation
+
+## Extract blocks with
+
+``` sh
+$ nix run github:tweag/ouroboros-consensus/aspiwack/explore-cardano#db-analyser -- --db path/to/db/ --config path/to/config.json --in-mem --dump --block-file path/to/blocks.csv --transaction-file path/to/transactions.csv
+```
+
+Where
+- `--db` points to a directory with a node's block database
+- `--config` points to the config file that the node used
+- `--block-file` and `--transaction-file` point to possibly non-existent files,
+  where the data will be dumped.
 
 ## Did you know?
 
