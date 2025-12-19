@@ -33,30 +33,31 @@ blocks = DataFrame(DuckDB.query(con, "SELECT \"slot#\", \"block_size\" FROM '$sr
 
 
 ## Histogram: distribution of block sizes
-# hist = barhist(
-#     blocks.block_size,
-#     bins = 100,
-#     xlabel = "Block size (Bytes)",
-#     ylabel = "Count",
-#     label = "mainnet",
-#     title = "Histogram of block size (100 bins)",
-# )
+hist = barhist(
+    blocks.block_size,
+    bins = 100,
+    xlabel = "Block size (Bytes)",
+    ylabel = "Count",
+    label = "mainnet",
+    title = "Histogram of block size (100 bins)",
+)
+png(hist,"block-distrib.png")
 
 ## Block size over time (rolling average of 1000 blocks)
-smoothed_block_size = rollmean(blocks.block_size, 1000)
-corresponding_slots = last(blocks."slot#", length(smoothed_block_size))
-# I'm getting some errors here that I can't reproduce when I write it by
-# manually in the REPL.
-overtime = plot(
-    corresponding_slots,
-    # blocks."slot#",
-    smoothed_block_size,
-    # blocks.block_size,
-    xlabel = "Slot",
-    ylabel = "Block size smoothed (Bytes)",
-    label = "mainnet",
-    title = "Block size over time",
-)
+# smoothed_block_size = rollmean(blocks.block_size, 1000)
+# corresponding_slots = last(blocks."slot#", length(smoothed_block_size))
+# # I'm getting some errors here that I can't reproduce when I write it by
+# # manually in the REPL.
+# overtime = plot(
+#     corresponding_slots,
+#     # blocks."slot#",
+#     smoothed_block_size,
+#     # blocks.block_size,
+#     xlabel = "Slot",
+#     ylabel = "Block size smoothed (Bytes)",
+#     label = "mainnet",
+#     title = "Block size over time",
+# )
 # png(overtime,"overtime.png")
 
 end # module Julianalyses
