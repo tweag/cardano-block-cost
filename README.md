@@ -5,7 +5,7 @@ validation
 ## Extract blocks with
 
 ``` sh
-$ nix run github:tweag/ouroboros-consensus/aspiwack/explore-cardano#db-analyser -- --db path/to/db/ --config path/to/config.json --in-mem --dump --block-file path/to/blocks.csv --transaction-file path/to/transactions.csv --analyse-from 4492900
+$ nix run github:tweag/ouroboros-consensus/aspiwack/explore-cardano#db-analyser -- --db path/to/db/ --config path/to/config.json --in-mem --dump-features --block-file path/to/blocks.csv --transaction-file path/to/transactions.csv --analyse-from 4492900
 ```
 
 Where
