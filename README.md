@@ -5,7 +5,7 @@ validation
 ## Extract blocks with
 
 ``` sh
-$ nix run github:tweag/ouroboros-consensus/aspiwack/explore-cardano#db-analyser -- --db path/to/db/ --config path/to/config.json --in-mem --dump-features --block-file path/to/blocks.csv --transaction-file path/to/transactions.csv --analyse-from 4492900
+$ nix run github:tweag/ouroboros-consensus/aspiwack/explore-cardano#db-analyser -- --db path/to/db/ --config path/to/config.json --in-mem --dump-features --block-file path/to/blocks.csv --transaction-file path/to/transactions.csv --analyse-from 146620810
 ```
 
 Where
@@ -13,6 +13,15 @@ Where
 - `--config` points to the config file that the node used
 - `--block-file` and `--transaction-file` point to possibly non-existent files,
   where the data will be dumped.
+
+Notes:
+-146620810 is the first block (or second block maybe?) of the latest epoch (see
+ [feature
+ table](https://github.com/cardano-foundation/CIPs/blob/master/CIP-0059/feature-table.md)).
+ There are meaningful block features way earlier than that (we've used 4492900
+ as a starting point in the past), but due to a quirk in the implementation of
+ the `db-analyser` tool, an analysis which crosses depends on the ledger state
+ cannot cross era boundaries.
 
 ## Did you know?
 
@@ -37,4 +46,3 @@ Here's the distribution of the number of script witnesses in transactions
 
 ![Distribution of number of script witnesses in transactions, as a 10-bin
 histogram, with logaritmic scale](./assets/script-wits-distrib.png)
-
