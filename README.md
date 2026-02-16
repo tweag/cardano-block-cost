@@ -1,6 +1,11 @@
 # Cardano's block cost analysis
+
 A home for Tweag's investigation into the cost structure of Cardano block
 validation
+
+## Download a Cardano DB snapshot
+
+The script ./bootstrap.sh is a simple wrapper over [Mithril](https://mithril.network/doc/) that downloads the latest snapshot of the Cardano DB. See the instructions [here](https://mithril.network/doc/manual/getting-started/bootstrap-cardano-node). You can change where the files are downloaded with `--download-dir`.
 
 ## Extract blocks with
 
