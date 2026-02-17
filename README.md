@@ -10,7 +10,10 @@ The script ./bootstrap.sh is a simple wrapper over [Mithril](https://mithril.net
 ## Extract blocks with
 
 ``` sh
-$ nix run github:tweag/ouroboros-consensus/aspiwack/explore-cardano#db-analyser -- --db path/to/db/ --config path/to/config.json --in-mem --dump-features --block-file path/to/blocks.csv --transaction-file path/to/transactions.csv --analyse-from 146620810
+# Make snapshots (very important! don't skip)
+$ bash ./snapshots.sh
+# Run the analysis proper
+$ nix run github:tweag/ouroboros-consensus/aspiwack/explore-cardano#db-analyser -- --db path/to/db/ --config path/to/config.json --lmdb --dump-features --block-file path/to/blocks.csv --transaction-file path/to/transactions.csv --analyse-from 146620810
 ```
 
 Where
