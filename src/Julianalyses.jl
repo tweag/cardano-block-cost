@@ -36,7 +36,23 @@ con = DuckDB.DB(config["database"]["file"])
 blocks = DataFrame(DuckDB.query(con,
     """
     SELECT
-      Block.block_no, Bench.mut_headerApply, SUM(Tx.min_fee) AS total_min_fee
+      Block.block_no,
+      Bench.mut_blockApply,
+      SUM(Tx."#script_wits") AS "total_#script_wits",
+      SUM(Tx."#addr_wits") AS "total_#addr_wits",
+      SUM(Tx.script_wits_size) AS total_script_wits_size,
+      SUM(Tx.size_reference_scripts) AS total_size_reference_scripts,
+      SUM(Tx.datum_size) AS total_datum_size,
+      SUM(Tx."#inputs") AS "total_#inputs",
+      SUM(Tx.size_inputs) AS total_size_inputs,
+      SUM(Tx."#outputs") AS "total_#outputs",
+      SUM(Tx."#reference_inputs") AS "total_#reference_inputs",
+      SUM(Tx."size_reference_inputs") AS total_size_reference_inputs,
+      SUM(Tx."#certs") AS "total_#certs",
+      SUM(Tx."#pool_certs") AS "total_#pool_certs",
+      SUM(Tx."#gov_certs") AS "total_#gov_certs",
+      SUM(Tx."#deleg_certs") AS "total_#deleg_certs",
+      SUM(Tx.min_fee) AS total_min_fee
     FROM
       '$src_blocks' as Block
     JOIN read_csv('$src_bench', names=['slot', 'slotGap', 'totalTime', 'mut', 'gc', 'majGcCount', 'minGcCount', 'allocatedBytes', 'mut_forecast', 'mut_headerTick', 'mut_headerApply', 'mut_ErrorApplyingHeader', 'mut_blockTick', 'mut_blockApply', 'mut_ErrorApplyingBlock', 'blockBytes', 'extra_one', 'extra_two']) as Bench
@@ -46,21 +62,21 @@ blocks = DataFrame(DuckDB.query(con,
     ON
       Block.block_no = Tx.block_no
     WHERE
-      Bench.mut_ErrorApplyingHeader = false
+      Bench.mut_ErrorApplyingBlock = false
     GROUP BY
-      Block.block_no, Bench.mut_headerApply
+      Block.block_no, Bench.mut_blockApply
     ;"""))
 # unclear: except for the last column name which is a bit shifty and spans
 # several columns, why doesn't duckdb manage to parse this header?
 
 ## Histogram of divergence between fee calculation and actual benchmark
-divergence = blocks.mut_headerApply ./ blocks.total_min_fee
+divergence = blocks.mut_blockApply ./ blocks.total_min_fee
 divergence_hist = histogram(divergence, bins=50, xlabel="Apply time / min fee calculation", ylabel="Frequency", title="Distribution of divergence ratio",  xscale=:log10, yscale=:log10)
 ## I don't know why the reference line doesn't appear below, but at any rate, it
 ## doesn't look very informative. I guess, with hindsight, that the fact that the
 ## two axes aren't in the same unit means that the reference ought to be
 ## something else.
-# scatter(blocks.total_min_fee, blocks.mut_headerApply, xlabel="Fee calculation", ylabel="Benchmark",  xscale=:log10, yscale=:log10)
+# scatter(blocks.total_min_fee, blocks.mut_blockApply, xlabel="Fee calculation", ylabel="Benchmark",  xscale=:log10, yscale=:log10)
 # plot!(blocks.total_min_fee, blocks.total_min_fee, label="Y = X")  # reference line
 # divergence_scatter= current()
 
