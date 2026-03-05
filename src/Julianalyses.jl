@@ -2,6 +2,7 @@ module Julianalyses
 
 
 using DataFrames
+using Statistics
 using DuckDB
 using Plots
 using StatsPlots
@@ -72,6 +73,35 @@ blocks = DataFrame(DuckDB.query(con,
 ## Histogram of divergence between fee calculation and actual benchmark
 divergence = blocks.mut_blockApply ./ blocks.total_min_fee
 divergence_hist = histogram(divergence, bins=50, xlabel="Apply time / min fee calculation", ylabel="Frequency", title="Distribution of divergence ratio",  xscale=:log10, yscale=:log10)
+
+# Pearson correlation of all the columns with the benchmark
+correlations = Dict()
+for col in names(blocks)
+    if col != "mut_blockApply"
+        correlations[col] = cor(blocks[!, col], blocks.mut_blockApply)
+    end
+end
+
+correlations = sort(collect(correlations), by=x->abs(x[2]), rev=true)
+# Result:
+# 16-element Vector{Pair{Any, Any}}:
+#  "total_size_reference_scripts" => NaN
+#             "total_size_inputs" => NaN
+#   "total_size_reference_inputs" => NaN
+#                 "total_min_fee" => 0.8885079438091604
+#       "total_#reference_inputs" => 0.8134088452764732
+#            "total_#script_wits" => 0.8134088452764732
+#                "total_#outputs" => 0.811341105954813
+#              "total_#addr_wits" => 0.7433565604307787
+#        "total_script_wits_size" => 0.5260806502852892
+#                 "total_#inputs" => 0.4757648168970541
+#              "total_datum_size" => 0.3436271899408422
+#                  "total_#certs" => 0.25596256012548707
+#            "total_#deleg_certs" => 0.2553232576678406
+#                      "block_no" => -0.07994423756252916
+#              "total_#gov_certs" => 0.025621151288029286
+#             "total_#pool_certs" => 0.016932487973567167
+
 ## I don't know why the reference line doesn't appear below, but at any rate, it
 ## doesn't look very informative. I guess, with hindsight, that the fact that the
 ## two axes aren't in the same unit means that the reference ought to be

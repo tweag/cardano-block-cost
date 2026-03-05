@@ -2,7 +2,7 @@
 
 julia_version = "1.12.1"
 manifest_format = "2.0"
-project_hash = "ed257b6622cfbfbbbfadfffa37a2bed1178828e0"
+project_hash = "b2b24db10853dbc6a083194e3b681b6abfcf5cf0"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -589,7 +589,7 @@ uuid = "ac6e5ff7-fb65-4e79-a425-ec3bc9c03011"
 version = "1.12.0"
 
 [[deps.Julianalyses]]
-deps = ["Cairo", "DataFrames", "DuckDB", "Fontconfig", "LanguageServer", "Plots", "Revise", "StatsPlots", "TOML"]
+deps = ["Cairo", "DataFrames", "DuckDB", "Fontconfig", "LanguageServer", "Plots", "Revise", "RollingFunctions", "StatsPlots", "TOML"]
 path = "."
 uuid = "a75bd7e6-2516-4e81-8f1b-017f9603ea27"
 version = "0.1.0"
