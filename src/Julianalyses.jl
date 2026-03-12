@@ -53,7 +53,22 @@ blocks = DataFrame(DuckDB.query(con,
       SUM(Tx."#pool_certs") AS "total_#pool_certs",
       SUM(Tx."#gov_certs") AS "total_#gov_certs",
       SUM(Tx."#deleg_certs") AS "total_#deleg_certs",
-      SUM(Tx.min_fee) AS total_min_fee
+      SUM(Tx.min_fee) AS total_min_fee,
+      MAX(Tx."#script_wits") AS "max_#script_wits",
+      MAX(Tx."#addr_wits") AS "max_#addr_wits",
+      MAX(Tx.script_wits_size) AS max_script_wits_size,
+      MAX(Tx.size_reference_scripts) AS max_size_reference_scripts,
+      MAX(Tx.datum_size) AS max_datum_size,
+      MAX(Tx."#inputs") AS "max_#inputs",
+      MAX(Tx.size_inputs) AS max_size_inputs,
+      MAX(Tx."#outputs") AS "max_#outputs",
+      MAX(Tx."#reference_inputs") AS "max_#reference_inputs",
+      MAX(Tx."size_reference_inputs") AS max_size_reference_inputs,
+      MAX(Tx."#certs") AS "max_#certs",
+      MAX(Tx."#pool_certs") AS "max_#pool_certs",
+      MAX(Tx."#gov_certs") AS "max_#gov_certs",
+      MAX(Tx."#deleg_certs") AS "max_#deleg_certs",
+      MAX(Tx.min_fee) AS max_min_fee
     FROM
       '$src_blocks' as Block
     JOIN read_csv('$src_bench', names=['slot', 'slotGap', 'totalTime', 'mut', 'gc', 'majGcCount', 'minGcCount', 'allocatedBytes', 'mut_forecast', 'mut_headerTick', 'mut_headerApply', 'mut_ErrorApplyingHeader', 'mut_blockTick', 'mut_blockApply', 'mut_ErrorApplyingBlock', 'blockBytes', 'extra_one', 'extra_two']) as Bench
