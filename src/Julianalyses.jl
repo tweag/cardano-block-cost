@@ -10,6 +10,7 @@ using RollingFunctions
 using Cairo
 using Fontconfig
 using TOML
+using GLM, StatsModels
 
 # To run, this file expects, in pwd, a `config.toml` file of the following
 # shape:
@@ -54,21 +55,21 @@ blocks = DataFrame(DuckDB.query(con,
       SUM(Tx."#gov_certs") AS "total_#gov_certs",
       SUM(Tx."#deleg_certs") AS "total_#deleg_certs",
       SUM(Tx.min_fee) AS total_min_fee,
-      MAX(Tx."#script_wits") AS "max_#script_wits",
-      MAX(Tx."#addr_wits") AS "max_#addr_wits",
-      MAX(Tx.script_wits_size) AS max_script_wits_size,
-      MAX(Tx.size_reference_scripts) AS max_size_reference_scripts,
-      MAX(Tx.datum_size) AS max_datum_size,
-      MAX(Tx."#inputs") AS "max_#inputs",
-      MAX(Tx.size_inputs) AS max_size_inputs,
-      MAX(Tx."#outputs") AS "max_#outputs",
-      MAX(Tx."#reference_inputs") AS "max_#reference_inputs",
-      MAX(Tx."size_reference_inputs") AS max_size_reference_inputs,
-      MAX(Tx."#certs") AS "max_#certs",
-      MAX(Tx."#pool_certs") AS "max_#pool_certs",
-      MAX(Tx."#gov_certs") AS "max_#gov_certs",
-      MAX(Tx."#deleg_certs") AS "max_#deleg_certs",
-      MAX(Tx.min_fee) AS max_min_fee
+      -- MAX(Tx."#script_wits") AS "max_#script_wits",
+      -- MAX(Tx."#addr_wits") AS "max_#addr_wits",
+      -- MAX(Tx.script_wits_size) AS max_script_wits_size,
+      -- MAX(Tx.size_reference_scripts) AS max_size_reference_scripts,
+      -- MAX(Tx.datum_size) AS max_datum_size,
+      -- MAX(Tx."#inputs") AS "max_#inputs",
+      -- MAX(Tx.size_inputs) AS max_size_inputs,
+      -- MAX(Tx."#outputs") AS "max_#outputs",
+      -- MAX(Tx."#reference_inputs") AS "max_#reference_inputs",
+      -- MAX(Tx."size_reference_inputs") AS max_size_reference_inputs,
+      -- MAX(Tx."#certs") AS "max_#certs",
+      -- MAX(Tx."#pool_certs") AS "max_#pool_certs",
+      -- MAX(Tx."#gov_certs") AS "max_#gov_certs",
+      -- MAX(Tx."#deleg_certs") AS "max_#deleg_certs",
+      -- MAX(Tx.min_fee) AS max_min_fee
     FROM
       '$src_blocks' as Block
     JOIN read_csv('$src_bench', names=['slot', 'slotGap', 'totalTime', 'mut', 'gc', 'majGcCount', 'minGcCount', 'allocatedBytes', 'mut_forecast', 'mut_headerTick', 'mut_headerApply', 'mut_ErrorApplyingHeader', 'mut_blockTick', 'mut_blockApply', 'mut_ErrorApplyingBlock', 'blockBytes', 'extra_one', 'extra_two']) as Bench
@@ -99,23 +100,44 @@ end
 
 correlations = sort(collect(correlations), by=x->abs(x[2]), rev=true)
 # Result:
-# 16-element Vector{Pair{Any, Any}}:
-#  "total_size_reference_scripts" => NaN
-#             "total_size_inputs" => NaN
-#   "total_size_reference_inputs" => NaN
-#                 "total_min_fee" => 0.8885079438091604
-#       "total_#reference_inputs" => 0.8134088452764732
-#            "total_#script_wits" => 0.8134088452764732
-#                "total_#outputs" => 0.811341105954813
-#              "total_#addr_wits" => 0.7433565604307787
-#        "total_script_wits_size" => 0.5260806502852892
-#                 "total_#inputs" => 0.4757648168970541
-#              "total_datum_size" => 0.3436271899408422
-#                  "total_#certs" => 0.25596256012548707
-#            "total_#deleg_certs" => 0.2553232576678406
-#                      "block_no" => -0.07994423756252916
-#              "total_#gov_certs" => 0.025621151288029286
-#             "total_#pool_certs" => 0.016932487973567167
+ #             "max_#script_wits" => NaN
+ #        "max_#reference_inputs" => NaN
+ #                "total_min_fee" => 0.9216735282292824
+ #  "total_size_reference_inputs" => 0.8869501576868908
+ # "total_size_reference_scripts" => 0.8864507498507652
+ #      "total_#reference_inputs" => 0.8134088452764734
+ #           "total_#script_wits" => 0.8134088452764734
+ #               "total_#outputs" => 0.8113411059548132
+ #             "total_#addr_wits" => 0.7433565604307785
+ #            "total_size_inputs" => 0.6497285123660923
+ #                  "max_min_fee" => 0.6282616852152523
+ #   "max_size_reference_scripts" => 0.6114395069105182
+ #    "max_size_reference_inputs" => 0.6103841868379937
+ #       "total_script_wits_size" => 0.5260806502852895
+ #                "total_#inputs" => 0.4757648168970543
+ #         "max_script_wits_size" => 0.44101727127154605
+ #             "total_datum_size" => 0.34362718994084224
+ #              "max_size_inputs" => 0.3406191715924063
+ #                 "max_#outputs" => 0.284926867556569
+ #               "max_datum_size" => 0.2577640871841093
+ #                 "total_#certs" => 0.2559625601254871
+ #           "total_#deleg_certs" => 0.25532325766784053
+ #                   "max_#certs" => 0.21283275538898805
+ #             "max_#deleg_certs" => 0.21232661056681895
+ #               "max_#addr_wits" => 0.19922344955729748
+ #                  "max_#inputs" => 0.1817287965564451
+ #                     "block_no" => -0.07994423756252916
+ #             "total_#gov_certs" => 0.025621151288029293
+ #               "max_#gov_certs" => 0.025621151288029286
+ #              "max_#pool_certs" => 0.01770089738603403
+ #            "total_#pool_certs" => 0.016932487973567154
+ #
+
+predictors=setdiff(names(blocks), ["mut_blockApply", "total_min_fee"])
+lin_regs=lm((term(:mut_blockApply) ~ sum(term.(predictors))), blocks)
+lin_reg_coefs=coeftable(lin_regs)
+
+
 
 ## I don't know why the reference line doesn't appear below, but at any rate, it
 ## doesn't look very informative. I guess, with hindsight, that the fact that the
