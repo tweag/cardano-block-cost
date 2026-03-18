@@ -47,9 +47,11 @@ blocks = DataFrame(DuckDB.query(con,
       SUM(Tx.datum_size) AS total_datum_size,
       SUM(Tx."#inputs") AS "total_#inputs",
       SUM(Tx.size_inputs) AS total_size_inputs,
+      SUM(Tx.size_inputs)-SUM(Tx."size_reference_inputs") AS total_size_nonref_inputs,
       SUM(Tx."#outputs") AS "total_#outputs",
       SUM(Tx."#reference_inputs") AS "total_#reference_inputs",
       SUM(Tx."size_reference_inputs") AS total_size_reference_inputs,
+      SUM(Tx."size_reference_inputs")-SUM(Tx.size_reference_scripts) AS total_size_nonscript_reference_inputs,
       SUM(Tx."#certs") AS "total_#certs",
       SUM(Tx."#pool_certs") AS "total_#pool_certs",
       SUM(Tx."#gov_certs") AS "total_#gov_certs",
@@ -133,8 +135,19 @@ correlations = sort(collect(correlations), by=x->abs(x[2]), rev=true)
  #            "total_#pool_certs" => 0.016932487973567154
  #
 
-predictors=setdiff(names(blocks), ["mut_blockApply", "total_min_fee"])
-lin_regs=lm((term(:mut_blockApply) ~ sum(term.(predictors))), blocks)
+## Linear regression
+# predictors=setdiff(names(blocks), ["mut_blockApply", "total_min_fee"])
+predictors=(# term("total_#script_wits")&term("total_script_wits_size"),
+            term("total_script_wits_size"),
+            # term("total_#addr_wits"),
+            term("total_size_reference_scripts"),
+            term("total_datum_size"),
+            # term("total_#inputs")&term("total_size_inputs"),
+            term("total_size_nonref_inputs"),
+            # term("total_#outputs"),
+            # term("total_#reference_inputs")&term("total_size_reference_inputs"),
+            term("total_size_nonscript_reference_inputs"))
+lin_regs=lm((term(:mut_blockApply) ~ sum(predictors)), blocks)
 lin_reg_coefs=coeftable(lin_regs)
 
 
