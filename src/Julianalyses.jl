@@ -11,6 +11,8 @@ using Cairo
 using Fontconfig
 using TOML
 using GLM, StatsModels
+using DecisionTree
+using MLJ
 
 # To run, this file expects, in pwd, a `config.toml` file of the following
 # shape:
@@ -147,10 +149,40 @@ predictors=(# term("total_#script_wits")&term("total_script_wits_size"),
             # term("total_#outputs"),
             # term("total_#reference_inputs")&term("total_size_reference_inputs"),
             term("total_size_nonscript_reference_inputs"))
-lin_regs=lm((term(:mut_blockApply) ~ sum(predictors)), blocks)
-lin_reg_coefs=coeftable(lin_regs)
+# lin_regs=lm((term(:mut_blockApply) ~ sum(predictors)), blocks)
+# lin_reg_coefs=coeftable(lin_regs)
 
 
+## Random-forest feature importance
+X = select(blocks,
+            "total_#script_wits",
+            "total_script_wits_size",
+            "total_#addr_wits",
+            "total_size_reference_scripts",
+            "total_datum_size",
+            "total_#inputs",
+            "total_size_nonref_inputs",
+            "total_#outputs",
+            "total_#reference_inputs",
+            "total_size_nonscript_reference_inputs"
+)
+y = blocks.mut_blockApply
+
+# model = RandomForestRegressor(n_trees=100,max_depth=10)
+# DecisionTree.fit!(model, X, y)
+
+# # importances = feature_importances(model)
+# fp = fitted_params(model)
+# importances = fp.feature_importances
+Forest = @load RandomForestRegressor pkg=DecisionTree
+model = Forest(n_trees=100, max_depth=10)
+
+mach = machine(model, float.(X), float.(y))
+MLJ.fit!(mach)
+
+importances = feature_importances(Julianalyses.mach)
+
+## TODO: plot the predicted y (I think this looks like `ŷ = predict(mach, X)`) against the real y.
 
 ## I don't know why the reference line doesn't appear below, but at any rate, it
 ## doesn't look very informative. I guess, with hindsight, that the fact that the
