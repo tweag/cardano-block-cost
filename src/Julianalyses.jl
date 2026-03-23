@@ -58,6 +58,8 @@ blocks = DataFrame(DuckDB.query(con,
       SUM(Tx."#pool_certs") AS "total_#pool_certs",
       SUM(Tx."#gov_certs") AS "total_#gov_certs",
       SUM(Tx."#deleg_certs") AS "total_#deleg_certs",
+      SUM(Tx."step_budget") AS "total_step_budget",
+      SUM(Tx."mem_budget") AS "total_mem_budget",
       SUM(Tx.min_fee) AS total_min_fee,
       -- MAX(Tx."#script_wits") AS "max_#script_wits",
       -- MAX(Tx."#addr_wits") AS "max_#addr_wits",
@@ -73,6 +75,8 @@ blocks = DataFrame(DuckDB.query(con,
       -- MAX(Tx."#pool_certs") AS "max_#pool_certs",
       -- MAX(Tx."#gov_certs") AS "max_#gov_certs",
       -- MAX(Tx."#deleg_certs") AS "max_#deleg_certs",
+      -- MAX(Tx."step_budget") AS max_step_budget,
+      -- MAX(Tx."mem_budget") AS max_mem_budget,
       -- MAX(Tx.min_fee) AS max_min_fee
     FROM
       '$src_blocks' as Block
@@ -148,7 +152,10 @@ predictors=(# term("total_#script_wits")&term("total_script_wits_size"),
             term("total_size_nonref_inputs"),
             # term("total_#outputs"),
             # term("total_#reference_inputs")&term("total_size_reference_inputs"),
-            term("total_size_nonscript_reference_inputs"))
+            term("total_size_nonscript_reference_inputs"),
+            term("total_step_budget"),
+            term("total_mem_budget"),
+            )
 # lin_regs=lm((term(:mut_blockApply) ~ sum(predictors)), blocks)
 # lin_reg_coefs=coeftable(lin_regs)
 
@@ -164,7 +171,9 @@ X = select(blocks,
             "total_size_nonref_inputs",
             "total_#outputs",
             "total_#reference_inputs",
-            "total_size_nonscript_reference_inputs"
+            "total_size_nonscript_reference_inputs",
+            "total_step_budget",
+            "total_mem_budget",
 )
 y = blocks.mut_blockApply
 
