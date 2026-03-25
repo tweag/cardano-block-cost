@@ -177,12 +177,6 @@ X = select(blocks,
 )
 y = blocks.mut_blockApply
 
-# model = RandomForestRegressor(n_trees=100,max_depth=10)
-# DecisionTree.fit!(model, X, y)
-
-# # importances = feature_importances(model)
-# fp = fitted_params(model)
-# importances = fp.feature_importances
 Forest = @load RandomForestRegressor pkg=DecisionTree
 model = Forest(n_trees=100, max_depth=10)
 
