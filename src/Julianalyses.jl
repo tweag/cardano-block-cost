@@ -61,6 +61,7 @@ blocks = DataFrame(DuckDB.query(con,
       SUM(Tx."step_budget") AS "total_step_budget",
       SUM(Tx."mem_budget") AS "total_mem_budget",
       SUM(Tx.min_fee) AS total_min_fee,
+      SUM(0.276*Tx.size_reference_scripts + 0.182 * (Tx.size_inputs - Tx.size_reference_inputs)) as model,
       -- MAX(Tx."#script_wits") AS "max_#script_wits",
       -- MAX(Tx."#addr_wits") AS "max_#addr_wits",
       -- MAX(Tx.script_wits_size) AS max_script_wits_size,
@@ -144,15 +145,15 @@ correlations = sort(collect(correlations), by=x->abs(x[2]), rev=true)
 ## Linear regression
 # predictors=setdiff(names(blocks), ["mut_blockApply", "total_min_fee"])
 predictors=(# term("total_#script_wits")&term("total_script_wits_size"),
-            term("total_script_wits_size"),
+            # term("total_script_wits_size"),
             # term("total_#addr_wits"),
             term("total_size_reference_scripts"),
-            term("total_datum_size"),
+            # term("total_datum_size"),
             # term("total_#inputs")&term("total_size_inputs"),
             term("total_size_nonref_inputs"),
-            # term("total_#outputs"),
+            term("total_#outputs"),
             # term("total_#reference_inputs")&term("total_size_reference_inputs"),
-            term("total_size_nonscript_reference_inputs"),
+            # term("total_size_nonscript_reference_inputs"),
             term("total_step_budget"),
             term("total_mem_budget"),
             )
@@ -177,13 +178,26 @@ X = select(blocks,
 )
 y = blocks.mut_blockApply
 
-Forest = @load RandomForestRegressor pkg=DecisionTree
-model = Forest(n_trees=100, max_depth=10)
+# Forest = @load RandomForestRegressor pkg=DecisionTree
+# model = Forest(n_trees=100, max_depth=10)
 
-mach = machine(model, float.(X), float.(y))
-MLJ.fit!(mach)
+# mach = machine(model, float.(X), float.(y))
+# MLJ.fit!(mach)
 
-importances = feature_importances(Julianalyses.mach)
+# importances = feature_importances(Julianalyses.mach)
+# Result:
+# :total_size_reference_scripts => 0.23312378026392577
+#                       :total_mem_budget => 0.2055821183707218
+#                      :total_step_budget => 0.14426048730095462
+#               :total_size_nonref_inputs => 0.1266131347211967
+#                Symbol("total_#outputs") => 0.11402263893056437
+#                 Symbol("total_#inputs") => 0.07900886534094251
+#       Symbol("total_#reference_inputs") => 0.03106428943141968
+#            Symbol("total_#script_wits") => 0.019654678133467825
+#              Symbol("total_#addr_wits") => 0.016066162348496463
+#                 :total_script_wits_size => 0.013115814129247394
+#  :total_size_nonscript_reference_inputs => 0.011147997216749549
+#                       :total_datum_size => 0.006340033812313445
 
 ## TODO: plot the predicted y (I think this looks like `ŷ = predict(mach, X)`) against the real y.
 
