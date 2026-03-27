@@ -13,6 +13,7 @@ using TOML
 using GLM, StatsModels
 using DecisionTree
 using MLJ
+using SymbolicRegression
 
 # To run, this file expects, in pwd, a `config.toml` file of the following
 # shape:
@@ -200,6 +201,32 @@ y = blocks.mut_blockApply
 #                       :total_datum_size => 0.006340033812313445
 
 ## TODO: plot the predicted y (I think this looks like `ŷ = predict(mach, X)`) against the real y.
+
+# Symbolic equation regression
+X2 = select(blocks,
+            # "total_#script_wits",
+            # "total_script_wits_size",
+            # "total_#addr_wits",
+            "total_size_reference_scripts",
+            # "total_datum_size",
+            # "total_#inputs",
+            "total_size_nonref_inputs",
+            "total_#outputs",
+            # "total_#reference_inputs",
+            # "total_size_nonscript_reference_inputs",
+            "total_step_budget",
+            "total_mem_budget",
+)
+eqn_model = SRRegressor(
+    niterations=50,
+    binary_operators=[+, -, *, /],
+    unary_operators=[log, exp],
+)
+
+eqn_mach = machine(eqn_model, float.(X2), float.(y))
+MLJ.fit!(eqn_mach)
+eqn_report = report(eqn_mach)
+
 
 ## I don't know why the reference line doesn't appear below, but at any rate, it
 ## doesn't look very informative. I guess, with hindsight, that the fact that the
