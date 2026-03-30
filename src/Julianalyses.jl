@@ -14,6 +14,7 @@ using GLM, StatsModels
 using DecisionTree
 using MLJ
 using SymbolicRegression
+using SymbolicUtils
 
 # To run, this file expects, in pwd, a `config.toml` file of the following
 # shape:
@@ -89,8 +90,8 @@ blocks = DataFrame(DuckDB.query(con,
     ON
       Block.block_no = Tx.block_no
     WHERE
-      Bench.mut_ErrorApplyingBlock = false AND
-      Bench.mut_blockApply > 30000
+      Bench.mut_ErrorApplyingBlock = false
+      -- AND Bench.mut_blockApply > 30000
     GROUP BY
       Block.block_no, Bench.mut_blockApply
     ;"""))
@@ -163,6 +164,8 @@ function multi_linear_reg()
 end
 
 
+Forest = @load RandomForestRegressor pkg=DecisionTree
+
 ## Random-forest feature importance
 function random_forest_reg()
 	X = select(blocks,
@@ -181,13 +184,13 @@ function random_forest_reg()
 	)
 	y = blocks.mut_blockApply
 
-	Forest = @load RandomForestRegressor pkg=DecisionTree
-	model = Forest(n_trees=100, max_depth=10)
-	
+	model = Forest(n_trees=1000, max_depth=10)
+
 	mach = machine(model, float.(X), float.(y))
 	MLJ.fit!(mach)
-    
-    feature_importances(Julianalyses.mach)
+
+    # feature_importances(Julianalyses.mach)
+    mach
 end
 # Result:
 # :total_size_reference_scripts => 0.23312378026392577
@@ -207,7 +210,7 @@ end
 
 # Symbolic equation regression
 function sym_reg()
-    X2 = select(blocks,
+    X = select(blocks,
         # "total_#script_wits",
         # "total_script_wits_size",
         # "total_#addr_wits",
@@ -221,15 +224,40 @@ function sym_reg()
         "total_step_budget",
         "total_mem_budget",
     )
+	y = blocks.mut_blockApply
     eqn_model = SRRegressor(
-        niterations=1000,
-        binary_operators=[+, -, *, /],
+        niterations=100,
+        binary_operators=[+, -, *, /], # todo remove - and / add max
         unary_operators=[log, exp],
     )
 
-    eqn_mach = machine(eqn_model, float.(X2), float.(y))
+    eqn_mach = machine(eqn_model, float.(X), float.(y))
     MLJ.fit!(eqn_mach)
     report(eqn_mach)
+end
+# Best eqn?
+# (((total_size_nonref_inputs * 8.073930334824604) + 885925.1627469545) / total_#outputs) + ((572.638270931741 / ((2.0736438981473231e9 / total_size_nonref_inputs) / total_size_nonref_inputs)) + 32665.2408791314)
+
+### Some plots
+
+# compares a model to the data
+function compare_for_accuracy(y; scale = :log10, ylabel = "Model")
+	# Put into a DataFrame
+	min_fee_comp_frame = DataFrame(x = blocks.mut_blockApply, y = y)
+
+	# Fit linear regression: y ~ x
+	model = lm(@formula(y ~ x), min_fee_comp_frame)
+
+	# Predicted values
+	x_sorted = sort(min_fee_comp_frame.x)
+	y_pred = GLM.predict(model, DataFrame(x = x_sorted))
+
+	# Plot scatter + regression line
+	scatter(min_fee_comp_frame.x, min_fee_comp_frame.y, xscale = scale, yscale = scale, xlabel="Block application (ms)", ylabel=ylabel, label="observed", legend=:topleft)
+	plot!(x_sorted, y_pred, label="linear fit", linewidth=2)
+
+	# Save to PNG
+	savefig("model-fit.png")
 end
 
 end # module Julianalyses
