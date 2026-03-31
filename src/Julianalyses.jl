@@ -89,26 +89,25 @@ blocks = DataFrame(DuckDB.query(con,
     ON
       Block.block_no = Tx.block_no
     WHERE
-      Bench.mut_ErrorApplyingBlock = false
+      Bench.mut_ErrorApplyingBlock = false AND
+      Bench.mut_blockApply > 30000
     GROUP BY
       Block.block_no, Bench.mut_blockApply
     ;"""))
 # unclear: except for the last column name which is a bit shifty and spans
 # several columns, why doesn't duckdb manage to parse this header?
 
-## Histogram of divergence between fee calculation and actual benchmark
-divergence = blocks.mut_blockApply ./ blocks.total_min_fee
-divergence_hist = histogram(divergence, bins=50, xlabel="Apply time / min fee calculation", ylabel="Frequency", title="Distribution of divergence ratio",  xscale=:log10, yscale=:log10)
-
 # Pearson correlation of all the columns with the benchmark
-correlations = Dict()
-for col in names(blocks)
-    if col != "mut_blockApply"
-        correlations[col] = cor(blocks[!, col], blocks.mut_blockApply)
-    end
+function correl()
+	correlations = Dict()
+	for col in names(blocks)
+	    if col != "mut_blockApply"
+	        correlations[col] = cor(blocks[!, col], blocks.mut_blockApply)
+	    end
+	end
+    sort(collect(correlations), by=x->abs(x[2]), rev=true)
 end
 
-correlations = sort(collect(correlations), by=x->abs(x[2]), rev=true)
 # Result:
  #             "max_#script_wits" => NaN
  #        "max_#reference_inputs" => NaN
@@ -144,48 +143,52 @@ correlations = sort(collect(correlations), by=x->abs(x[2]), rev=true)
  #
 
 ## Linear regression
-# predictors=setdiff(names(blocks), ["mut_blockApply", "total_min_fee"])
-predictors=(# term("total_#script_wits")&term("total_script_wits_size"),
-            # term("total_script_wits_size"),
-            # term("total_#addr_wits"),
-            term("total_size_reference_scripts"),
-            # term("total_datum_size"),
-            # term("total_#inputs")&term("total_size_inputs"),
-            term("total_size_nonref_inputs"),
-            term("total_#outputs"),
-            # term("total_#reference_inputs")&term("total_size_reference_inputs"),
-            # term("total_size_nonscript_reference_inputs"),
-            term("total_step_budget"),
-            term("total_mem_budget"),
-            )
-# lin_regs=lm((term(:mut_blockApply) ~ sum(predictors)), blocks)
-# lin_reg_coefs=coeftable(lin_regs)
+function multi_linear_reg()
+    # Manually selecting terms.
+    predictors=(# term("total_#script_wits")&term("total_script_wits_size"),
+                # term("total_script_wits_size"),
+                # term("total_#addr_wits"),
+                term("total_size_reference_scripts"),
+                term("total_datum_size"),
+                # term("total_#inputs")&term("total_size_inputs"),
+                term("total_size_nonref_inputs"),
+                term("total_#outputs"),
+                # term("total_#reference_inputs")&term("total_size_reference_inputs"),
+                # term("total_size_nonscript_reference_inputs"),
+                term("total_step_budget"),
+                term("total_mem_budget"),
+                )
+    lin_regs=lm((term(:mut_blockApply) ~ sum(predictors)), blocks)
+    coeftable(lin_regs)
+end
 
 
 ## Random-forest feature importance
-X = select(blocks,
-            "total_#script_wits",
-            "total_script_wits_size",
-            "total_#addr_wits",
-            "total_size_reference_scripts",
-            "total_datum_size",
-            "total_#inputs",
-            "total_size_nonref_inputs",
-            "total_#outputs",
-            "total_#reference_inputs",
-            "total_size_nonscript_reference_inputs",
-            "total_step_budget",
-            "total_mem_budget",
-)
-y = blocks.mut_blockApply
+function random_forest_reg()
+	X = select(blocks,
+	            "total_#script_wits",
+	            "total_script_wits_size",
+	            "total_#addr_wits",
+	            "total_size_reference_scripts",
+	            "total_datum_size",
+	            "total_#inputs",
+	            "total_size_nonref_inputs",
+	            "total_#outputs",
+	            "total_#reference_inputs",
+	            "total_size_nonscript_reference_inputs",
+	            "total_step_budget",
+	            "total_mem_budget",
+	)
+	y = blocks.mut_blockApply
 
-# Forest = @load RandomForestRegressor pkg=DecisionTree
-# model = Forest(n_trees=100, max_depth=10)
-
-# mach = machine(model, float.(X), float.(y))
-# MLJ.fit!(mach)
-
-# importances = feature_importances(Julianalyses.mach)
+	Forest = @load RandomForestRegressor pkg=DecisionTree
+	model = Forest(n_trees=100, max_depth=10)
+	
+	mach = machine(model, float.(X), float.(y))
+	MLJ.fit!(mach)
+    
+    feature_importances(Julianalyses.mach)
+end
 # Result:
 # :total_size_reference_scripts => 0.23312378026392577
 #                       :total_mem_budget => 0.2055821183707218
@@ -203,78 +206,30 @@ y = blocks.mut_blockApply
 ## TODO: plot the predicted y (I think this looks like `ŷ = predict(mach, X)`) against the real y.
 
 # Symbolic equation regression
-X2 = select(blocks,
-            # "total_#script_wits",
-            # "total_script_wits_size",
-            # "total_#addr_wits",
-            "total_size_reference_scripts",
-            # "total_datum_size",
-            # "total_#inputs",
-            "total_size_nonref_inputs",
-            "total_#outputs",
-            # "total_#reference_inputs",
-            # "total_size_nonscript_reference_inputs",
-            "total_step_budget",
-            "total_mem_budget",
-)
-eqn_model = SRRegressor(
-    niterations=50,
-    binary_operators=[+, -, *, /],
-    unary_operators=[log, exp],
-)
+function sym_reg()
+    X2 = select(blocks,
+        # "total_#script_wits",
+        # "total_script_wits_size",
+        # "total_#addr_wits",
+        "total_size_reference_scripts",
+        "total_datum_size",
+        # "total_#inputs",
+        "total_size_nonref_inputs",
+        "total_#outputs",
+        # "total_#reference_inputs",
+        # "total_size_nonscript_reference_inputs",
+        "total_step_budget",
+        "total_mem_budget",
+    )
+    eqn_model = SRRegressor(
+        niterations=1000,
+        binary_operators=[+, -, *, /],
+        unary_operators=[log, exp],
+    )
 
-eqn_mach = machine(eqn_model, float.(X2), float.(y))
-MLJ.fit!(eqn_mach)
-eqn_report = report(eqn_mach)
-
-
-## I don't know why the reference line doesn't appear below, but at any rate, it
-## doesn't look very informative. I guess, with hindsight, that the fact that the
-## two axes aren't in the same unit means that the reference ought to be
-## something else.
-# scatter(blocks.total_min_fee, blocks.mut_blockApply, xlabel="Fee calculation", ylabel="Benchmark",  xscale=:log10, yscale=:log10)
-# plot!(blocks.total_min_fee, blocks.total_min_fee, label="Y = X")  # reference line
-# divergence_scatter= current()
-
-## Histogram: distribution of block sizes
-# hist = barhist(
-#     blocks.block_size,
-#     bins = 100,
-#     xlabel = "Block size (Bytes)",
-#     ylabel = "Count",
-#     label = "mainnet",
-#     title = "Histogram of block size (100 bins)",
-# )
-# png(hist,"block-distrib.png")
-
-## Block size over time (rolling average of 1000 blocks)
-# smoothed_block_size = rollmean(blocks.block_size, 1000)
-# corresponding_slots = last(blocks."slot#", length(smoothed_block_size))
-# # I'm getting some errors here that I can't reproduce when I write it by
-# # manually in the REPL.
-# overtime = plot(
-#     corresponding_slots,
-#     # blocks."slot#",
-#     smoothed_block_size,
-#     # blocks.block_size,
-#     xlabel = "Slot",
-#     ylabel = "Block size smoothed (Bytes)",
-#     label = "mainnet",
-#     title = "Block size over time",
-# )
-# png(overtime,"overtime.png")
-
-## Histogram: distribution of number of script witnesses
-# script_wits_dist = barhist(
-#     txs."#script_wits",
-#     weights = txs.num,
-#     bins = 10,
-#     xlabel = "Number of script witnesses",
-#     ylabel = "Count (logarithmic)",
-#     yscale = :log10,
-#     label = "mainnet",
-#     title = "Histogram of number script witnesses (10 bins)",
-# )
-# png(script_wits_dist,"script-wits-distrib.png")
+    eqn_mach = machine(eqn_model, float.(X2), float.(y))
+    MLJ.fit!(eqn_mach)
+    report(eqn_mach)
+end
 
 end # module Julianalyses
